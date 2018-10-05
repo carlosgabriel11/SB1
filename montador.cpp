@@ -55,3 +55,16 @@ Preprocessor::Preprocessor(const string& name){
     source = fopen(name.c_str(), "r");
     pre = fopen(preprocessName.c_str(), "w");
 }
+
+//the method to remove the comments of the file
+void Preprocessor::removeComments(){
+    //an auxiliar char variable to get each character of the file
+    char aux = 0;
+    //an auxiliar string
+    string aux_str;
+
+    //read each character of the file
+    while(aux != EOF){
+
+    }
+}
