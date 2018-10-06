@@ -9,7 +9,6 @@ SECTION TEXT
 		STORE		R
 		OUTPUT	R
 		STOP
-;dasdasdasd
 SECTION BSS
 	B:		SPACE
 	H:		SPACE
