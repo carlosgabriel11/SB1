@@ -1,6 +1,7 @@
 # depslib dependency file v1.0
-1538757408 source:/home/carlos/Documentos/UnB/Semestre_10/SB/Trabalho/SB1/montador.cpp
+1539257822 source:/home/carlos/Documentos/UnB/Semestre_10/SB/Trabalho/SB1/montador.cpp
 	<iostream>
 	<stdio.h>
 	<string>
+	<vector>
 
