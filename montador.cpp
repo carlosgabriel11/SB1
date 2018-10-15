@@ -70,7 +70,6 @@ public:
     bool getExtern(const string&) throw(invalid_argument);
 };
 
-
 //this class will be the definition table of the first passage of the mounter
 class DefinitionTable{
     //the public labels
@@ -88,14 +87,104 @@ public:
 };
 
 //this class will be the instruction table
+class InstructionTable{
+    //the add operation
+    const static string ADD;
+    //the sub operation
+    const static string SUB;
+    //the mult operation
+    const static string MULT;
+    //the div operation
+    const static string DIV;
+    //the jmp operation
+    const static string JMP;
+    //the jmpn operation
+    const static string JMPN;
+    //the jmpp operation
+    const static string JMPP;
+    //the jmpz operation
+    const static string JMPZ;
+    //the copy operation
+    const static string COPY;
+    //the load operation
+    const static string LOAD;
+    //the store operation
+    const static string STORE;
+    //the input operation
+    const static string INPUT;
+    //the output operation
+    const static string OUTPUT;
+    //the stop operation
+    const static string STOP;
+
+public:
+    //check if the operation exists
+    string checkOperation(const string&) throw(invalid_argument);
+};
+
+//this class will be the diretive table
+class DiretiveTable{
+    public:
+    //the section directive
+    const static string SECTION;
+    //the space directive
+    const static string SPACE;
+    //the const directive
+    const static string CONST;
+    //the public directive
+    const static string PUBLIC;
+    //the extern directive
+    const static string EXTERN;
+    //ŧhe begin directive
+    const static string BEGIN;
+    //the end directive
+    const static string END;
+};
+
+//this class will be the mounter
+class Mounter{
+    //the file after the preprocessing
+    FILE* source;
+    //the mounted file
+    FILE* mounted;
+
+    //an variable to check if the source file is a module or if it isn't
+    bool MODULO = false;
+
+    //the tables
+    SymbolTable symboltable;
+    DefinitionTable definitiontable;
+    InstructionTable instructiontable;
+    DiretiveTable diretivetable;
+
+    //get an line of the source file
+    string getFileLine();
+
+    //the first the passage of the mounted
+    void firstPassage();
+
+public:
+    //the constructor of the class
+    Mounter(const string&);
+    //the destructor of the class
+    ~Mounter();
+    //the action of mount
+    void mount();
+};
+
 
 //start of the main function
 int main(int argc, char** argv){
     Preprocessor *pre = new Preprocessor("triangulo.asm");
+    Mounter *mounter = new Mounter(pre->getPreprocessingName());
 
     pre->preprocess();
 
     delete pre;
+
+    mounter->mount();
+
+    delete mounter;
 
     return 0;
 }
@@ -450,7 +539,7 @@ bool SymbolTable::getExtern(const string& str) throw(invalid_argument){
 }
 
 /*
-DEFINITION AND METHODS OF THE CLASS DefinitionTable
+DEFINITION OF THE METHODS OF THE CLASS DefinitionTable
 */
 //the method to put the label into the definition table
 void DefinitionTable::setLabel(const string& str) throw(invalid_argument){
@@ -496,4 +585,232 @@ int DefinitionTable::getAddress(const string& str) throw(invalid_argument){
     }
 
     throw invalid_argument("ROTULO NAO ENCONTRADO NA TABELA DE DEFINICAO");
+}
+
+/*
+DEFINITION OF THE METHODS AND ATTRIBUTES OF THE CLASS InstructionTable
+*/
+//definition of the add operation
+const string InstructionTable::ADD = "ADD";
+//definition of the sub operation
+const string InstructionTable::SUB = "SUB";
+//definition of the mult operation
+const string InstructionTable::MULT = "MULT";
+//definition of the div operation
+const string InstructionTable::DIV = "DIV";
+//definition of the jmp operation
+const string InstructionTable::JMP = "JMP";
+//definition of the jmpn operation
+const string InstructionTable::JMPN = "JMPN";
+//definition of the jmpp operation
+const string InstructionTable::JMPP = "JMPP";
+//definition of the jmpz operation
+const string InstructionTable::JMPZ = "JMPZ";
+//definition of the copy operation
+const string InstructionTable::COPY = "COPY";
+//definition of the load operation
+const string InstructionTable::LOAD = "LOAD";
+//definition of the store operation
+const string InstructionTable::STORE = "STORE";
+//definition of the input operation
+const string InstructionTable::INPUT = "INPUT";
+//definition of the output operation
+const string InstructionTable::OUTPUT = "OUTPUT";
+//definition of the stop operation
+const string InstructionTable::STOP = "STOP";
+
+//the method to check the opcode of the operations
+string InstructionTable::checkOperation(const string& str) throw(invalid_argument){
+    if(str == ADD){
+        return "01";
+    }
+    else if(str == SUB){
+        return "02";
+    }
+    else if(str == MULT){
+        return "03";
+    }
+    else if(str == DIV){
+        return "04";
+    }
+    else if(str == JMP){
+        return "05";
+    }
+    else if(str == JMPN){
+        return "06";
+    }
+    else if(str == JMPP){
+        return "07";
+    }
+    else if(str == JMPZ){
+        return "08";
+    }
+    else if(str == COPY){
+        return "09";
+    }
+    else if(str == LOAD){
+        return "10";
+    }
+    else if(str == STORE){
+        return "11";
+    }
+    else if(str == INPUT){
+        return "12";
+    }
+    else if(str == OUTPUT){
+        return "13";
+    }
+    else if(str == STOP){
+        return "14";
+    }
+    else{
+        throw invalid_argument("INSTRUCAO INVALIDA");
+    }
+}
+
+/*
+DEFINITION OF THE ATTRIBUTES OF THE CLASS DirectiveTable
+*/
+//definition of the attribute section
+const string DiretiveTable::SECTION = "SECTION";
+//definition of the attribute space
+const string DiretiveTable::SPACE = "SPACE";
+//definition of the attribute const
+const string DiretiveTable::CONST = "CONST";
+//definition of the attribute public
+const string DiretiveTable::PUBLIC = "PUBLIC";
+//definition of the attribute extern
+const string DiretiveTable::EXTERN = "EXTERN";
+//definition of the attribute begin
+const string DiretiveTable::BEGIN = "BEGIN";
+//definition of the attibute end
+const string DiretiveTable::END = "END";
+
+/*
+DEFINITION OF THE METHODS OF THE CLASS Mounter
+*/
+//this constructor will open the files
+Mounter::Mounter(const string& fileName){
+    //open the file
+    source = fopen(fileName.c_str(), "r");
+}
+
+//this destructor will close the files
+Mounter::~Mounter(){
+    //closing the files
+    fclose(source);
+    //fclose(mounted);
+}
+
+//this method will get a file line
+string Mounter::getFileLine(){
+    //an auxiliar char
+    char chAux;
+    //the line of the file
+    string line;
+
+    while(chAux != EOF){
+        //get a character from the file
+        chAux = fgetc(source);
+        //put the character in the string
+        line.push_back(chAux);
+
+        //check if it is in the end of the file
+        if(chAux == EOF){
+            break;
+        }
+
+        //if the character is a \n, return
+        if(chAux == '\n'){
+            return line;
+        }
+    }
+
+    return "";
+}
+
+//this method will do the first passage of the mounter
+void Mounter::firstPassage(){
+    //the line of the file
+    string line;
+    //the number of the line of the file
+    unsigned int lineNumber = 1;
+    //the position counter
+    unsigned int posNumber = 0;
+    //a regular counter
+    unsigned int counter;
+    //an auxiliar position variable
+    size_t auxPos;
+    //an variable to check if it is in the section text
+    bool text = false;
+    //an variable to check if it is in the section data
+    bool data = false;
+    //an variable to check if it is in the section bss
+    bool bss = false;
+    //an variable to contain the label
+    string label;
+    //an variable to contain the operations
+    string operation = "";
+
+    //the loop of the first passage
+    do{
+        //get a line from the file
+        line = getFileLine();
+
+        if(line == ""){
+            break;
+        }
+
+        //search for :
+        auxPos = line.find(':');
+
+        //if there isn't a :
+        if(auxPos == string::npos){
+            label = "";
+        }
+        else{
+            //get the label
+            for(counter = 0; counter < auxPos; counter++){
+                label.push_back(line[counter]);
+            }
+
+            //get the position of the operation
+            try{
+                for(counter = (auxPos + 1); ; counter++){
+                    if((line[counter] != ' ') && (line[counter] != '\n') && (line[counter] != '\t')){
+                        auxPos = counter;
+                        break;
+                    }
+                    //check if it has reached the end of the file
+                    if(line[counter] == '\n'){
+                        throw invalid_argument("FALTA OPERACAO");
+                    }
+                }
+            }
+            catch(invalid_argument& e){
+                cerr << "Erro na linha " << lineNumber << endl;
+                cerr << e.what() << endl;
+            }
+
+            //get the operation
+            for(counter = auxPos; ; counter++){
+                if((line[counter] == ' ') || (line[counter] == '\n') || (line[counter] == '\t')){
+                    break;
+                }
+
+                operation.push_back(line[counter]);
+            }
+            cout << label;
+            cout << operation;
+
+            label = "";
+            operation = "";
+        }
+
+    }while(line != "");
+}
+
+//this method will mount the source file
+void Mounter::mount(){
+    firstPassage();
 }
