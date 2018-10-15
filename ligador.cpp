@@ -5,6 +5,8 @@
 
 using namespace std;
 
+string outname;
+
 void printIt(std::map<string,int> m) {      // Funcao para print de std::map para debug visual
     cout << "tabela print: " << endl;
     for(std::map<string,int>::iterator it=m.begin();it!=m.end();++it)
@@ -55,7 +57,7 @@ void get_data(auto relatives, auto FileName, auto TD, auto TU, auto Fator_correc
       relatives[i].push_back(stoi(aux));
     }
   }
-
+  Fator_correcao[i] = 0;
   while(fscanf(ptr,"%d", &num)!=EOF){
     Fator_correcao[i]++;
   }
@@ -67,7 +69,6 @@ void get_data(auto relatives, auto FileName, auto TD, auto TU, auto Fator_correc
 
 void gera_binario(auto TDglobal, auto TU, auto Fator_correcao, auto FileNames, auto N_arquivos, auto relatives){
     FILE *outptr;
-    string outname = "out.txt";
     outptr = fopen(outname.c_str(), "w"); // MODIFICAR AQUI O NOME DO ARQUIVO DE SAIDA
     std::map<int, string>::iterator it;
 
@@ -106,18 +107,33 @@ void gera_binario(auto TDglobal, auto TU, auto Fator_correcao, auto FileNames, a
 
 int main(int argc,char **argv){
     // Pega o numero de arquivos de entrada
-    int N_arquivos;
+    int N_arquivos, t;
+    string str;
     N_arquivos = argc-1;
     cout << "N_arquivos" << N_arquivos << endl;
 
     // Pega o nome dos arquivos
     string FileNames[N_arquivos];
-    for(int i=0;i<N_arquivos;i++) FileNames[i] = argv[i+1];
+    for(int i=0;i<N_arquivos;i++){
+      FileNames[i] = argv[i+1];
+      str = FileNames[i];
+      cout << "chegou aqui" << endl;
+      t = str.size();
+      if((str[t-1]!='j')||(str[t-2]!='b')||(str[t-3]!='o')||(str[t-4]!='.')){
+        str += ".obj";
+      }
+      FileNames[i] = str;
+    }
+    outname = FileNames[0];
+    t = outname.size();
+    outname[t-3] = 'e';
+    outname[t-2] = '\0';
+    outname[t-1] = '\0';
+    cout << "outname: " << outname << endl;
 
     if(argc==2){  // Caso haja somente um modulo
       FILE *outptr, *inptr;
       int num;
-      string outname = "out.txt";
       outptr = fopen(outname.c_str(), "w"); // MODIFICAR AQUI O NOME DO ARQUIVO DE SAIDA
       inptr = fopen(FileNames[0].c_str(), "r");
       while(fscanf(inptr, "%d", &num)!=EOF){
