@@ -24,6 +24,9 @@ class Preprocessor{
     //the source file after the preprocessing
     FILE* pre;
 
+    //the string that contains the name of the preprocessing file name
+    string preName;
+
     //an structure to the EQU diretive
     vector<EQU_Diretive> equ;
 
@@ -41,6 +44,8 @@ public:
     Preprocessor(const string&);
     //the destructor to close the file
     ~Preprocessor();
+    //get the preprocessing file name
+    string getPreprocessingName();
     //the method to preprocess the source file
     void preprocess();
 
@@ -79,6 +84,8 @@ Preprocessor::Preprocessor(const string& name){
 
     preprocessName = preprocessName + ".pre";
 
+    //get the preprocessing name
+    preName = preprocessName;
 
     source = fopen(name.c_str(), "r");
     pre = fopen(preprocessName.c_str(), "w");
@@ -238,6 +245,11 @@ bool Preprocessor::checkIF(const string& line, const size_t& position){
     else{
         return false;
     }
+}
+
+//the method to return the name of the preprocessing file
+string Preprocessor::getPreprocessingName(){
+    return preName;
 }
 
 //the method to preprocess the source file
