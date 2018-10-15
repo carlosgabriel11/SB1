@@ -1,7 +1,8 @@
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 using namespace std;
 
@@ -50,6 +51,43 @@ public:
     void preprocess();
 
 };
+
+//this class will be the symbol table of the first passage of the mounter
+class SymbolTable{
+    //the label
+    vector<string> label;
+    //the address
+    vector<int> address;
+    //if the label is extern
+    vector<bool> isExtern;
+
+public:
+    //set the attributes of this class
+    void setSymbol(const string&, const int&, const bool&) throw(invalid_argument);
+    //get the address
+    int getAddress(const string&) throw(invalid_argument);
+    //get the information if the symbol is extern
+    bool getExtern(const string&) throw(invalid_argument);
+};
+
+
+//this class will be the definition table of the first passage of the mounter
+class DefinitionTable{
+    //the public labels
+    vector<string> label;
+    //the address of the public labels
+    vector<int> address;
+
+public:
+    //set the label name
+    void setLabel(const string&) throw(invalid_argument);
+    //set the address of the label
+    void setAddress(const string&, const int&);
+    //get the address of the label
+    int getAddress(const string&) throw(invalid_argument);
+};
+
+//this class will be the instruction table
 
 //start of the main function
 int main(int argc, char** argv){
@@ -358,4 +396,104 @@ void Preprocessor::preprocess(){
             state = true;
         }
     }
+}
+
+/*
+DEFINITION OF THE METHODS OF THE CLASS SymbolTable
+*/
+//the method to set the symbols in the symbol table
+void SymbolTable::setSymbol(const string& str, const int& position, const bool& status) throw(invalid_argument){
+    //a regular counter
+    unsigned int counter;
+
+    //©heck if the symbol is already on the table
+    for(counter = 0; counter < label.size(); counter++){
+        if(label[counter] == str){
+            throw invalid_argument("ROTULO REPETIDO");
+        }
+    }
+
+    label.push_back(str);
+    address.push_back(position);
+    isExtern.push_back(status);
+}
+
+//the method to get the address of any label
+int SymbolTable::getAddress(const string& str) throw(invalid_argument){
+    //a regular counter
+    unsigned int counter;
+
+    //a loop to search the label into the vector
+    for(counter = 0; counter < label.size(); counter++){
+        if(label[counter] == str){
+            return address[counter];
+        }
+    }
+
+    throw invalid_argument("ROTULO INEXISTENTE");
+}
+
+//the method to get if the label is extern or not
+bool SymbolTable::getExtern(const string& str) throw(invalid_argument){
+    //a regular counter
+    unsigned int counter;
+
+    //a loop to search a label into the vector
+    for(counter = 0; counter < label.size(); counter++){
+        if(label[counter] == str){
+            return isExtern[counter];
+        }
+    }
+
+    //if the label isn't in the vector
+    throw invalid_argument("ROTULO INEXISTENTE");
+}
+
+/*
+DEFINITION AND METHODS OF THE CLASS DefinitionTable
+*/
+//the method to put the label into the definition table
+void DefinitionTable::setLabel(const string& str) throw(invalid_argument){
+    //a regular counter
+    unsigned int counter;
+
+    //check if this label is already on the table
+    for(counter = 0; counter < label.size(); counter++){
+        if(label[counter] == str){
+            throw invalid_argument("REPETICAO DE DIRETIVA PUBLICA PARA O MESMO ROTULO");
+        }
+    }
+
+    //put on the vector
+    label.push_back(str);
+    address.push_back(0);
+}
+
+//the method to put the address into the definition table
+void DefinitionTable::setAddress(const string& str, const int& number){
+    //a regular counter
+    unsigned int counter;
+
+    //get the position of the label
+    for(counter = 0; counter < label.size(); counter++){
+        if(label[counter] == str){
+            address[counter] = number;
+            return;
+        }
+    }
+}
+
+//the method to get the address of the label in the definition table
+int DefinitionTable::getAddress(const string& str) throw(invalid_argument){
+    //a regular counter
+    unsigned int counter;
+
+    //get the position of the label
+    for(counter = 0; counter < label.size(); counter++){
+        if(label[counter] == str){
+            return address[counter];
+        }
+    }
+
+    throw invalid_argument("ROTULO NAO ENCONTRADO NA TABELA DE DEFINICAO");
 }
