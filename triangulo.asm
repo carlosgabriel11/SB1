@@ -11,7 +11,7 @@ SECTION TEXT
 		STOP
 ;dasdasdasd
 SECTION BSS
-	B:		SPACE; testando
+	B:		SPACE 2; testando
 	H:		SPACE
 	R:		SPACE
 	SECTION DATA

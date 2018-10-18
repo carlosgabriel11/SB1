@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <cstdlib>
 
 using namespace std;
 
@@ -119,7 +120,7 @@ class InstructionTable{
 
 public:
     //check if the operation exists
-    string checkOperation(const string&) throw(invalid_argument);
+    string checkOperation(const string&);
 };
 
 //this class will be the diretive table
@@ -162,6 +163,8 @@ class Mounter{
 
     //the first the passage of the mounted
     void firstPassage();
+    //check if the word is present in the line
+    size_t findWord(const string&, const string&);
 
 public:
     //the constructor of the class
@@ -175,7 +178,7 @@ public:
 
 //start of the main function
 int main(int argc, char** argv){
-    Preprocessor *pre = new Preprocessor("triangulo.asm");
+    Preprocessor *pre = new Preprocessor("bin.asm");
     Mounter *mounter = new Mounter(pre->getPreprocessingName());
 
     pre->preprocess();
@@ -620,7 +623,7 @@ const string InstructionTable::OUTPUT = "OUTPUT";
 const string InstructionTable::STOP = "STOP";
 
 //the method to check the opcode of the operations
-string InstructionTable::checkOperation(const string& str) throw(invalid_argument){
+string InstructionTable::checkOperation(const string& str){
     if(str == ADD){
         return "01";
     }
@@ -664,7 +667,7 @@ string InstructionTable::checkOperation(const string& str) throw(invalid_argumen
         return "14";
     }
     else{
-        throw invalid_argument("INSTRUCAO INVALIDA");
+        return "-1";
     }
 }
 
@@ -702,6 +705,30 @@ Mounter::~Mounter(){
     //fclose(mounted);
 }
 
+//the method to check if there is any word in the string
+size_t Mounter::findWord(const string& line, const string& word){
+    //the variable to receive the position of the word in the line
+    size_t pos;
+
+    //check if the word in the line
+    pos = line.find(word);
+
+    //return npos if the word isn't in the string
+    if(pos == string::npos){
+        return pos;
+    }
+    //check if there is space after the word
+    else{
+        if((line[pos + word.size()] == ' ') || (line[pos + word.size()] == '\n')){
+            return pos;
+        }
+        else{
+            return string::npos;
+        }
+    }
+
+}
+
 //this method will get a file line
 string Mounter::getFileLine(){
     //an auxiliar char
@@ -716,7 +743,7 @@ string Mounter::getFileLine(){
         line.push_back(chAux);
 
         //check if it is in the end of the file
-        if(chAux == EOF){
+        if((chAux == EOF) || (chAux == '\0')){
             break;
         }
 
@@ -751,6 +778,8 @@ void Mounter::firstPassage(){
     string label;
     //an variable to contain the operations
     string operation = "";
+    //the opcode of the instruction
+    string opcode;
 
     //the loop of the first passage
     do{
@@ -767,10 +796,194 @@ void Mounter::firstPassage(){
         //if there isn't a :
         if(auxPos == string::npos){
             label = "";
+
+            try{
+                //get the position of the operation
+                for(counter = 0; ; counter++){
+                    if((line[counter] != ' ') && (line[counter] != '\t')){
+                        auxPos = counter;
+                        break;
+                    }
+
+                    //if reached in the end of the line
+                    if(line[counter] == '\n'){
+                        throw invalid_argument("SEM OPERACAO");
+                    }
+                }
+            }
+
+            //if there isn't any operation
+            catch(invalid_argument& e){
+                cerr << "ERRO NA LINHA " << lineNumber << endl;
+                cerr << e.what() << endl;
+                //close the file
+                fclose(source);
+                //exit the program
+                exit(1);
+            }
+
+            //get the operation
+            for(counter = auxPos; ; counter++){
+                if((line[counter] == ' ')|| (line[counter] == '\t') || (line[counter] == '\n')){
+                    break;
+                }
+
+                //put the character in the operation string
+                operation.push_back(line[counter]);
+            }
+
+            //get the opcode of the operation
+            opcode = instructiontable.checkOperation(operation);
+
+            //if the operation doesn't exist
+            if((opcode == "-1") && (operation != "")){
+                //check if it is a directive
+                try{
+                    //the diretive section
+                    if(operation == diretivetable.SECTION){
+                        //if it is the section text
+                        if(findWord(line, "TEXT") != string::npos){
+                            //find the diretive text
+                            text = true;
+                            data = false;
+                            bss = false;
+
+                            lineNumber++;
+                            label.clear();
+                            operation.clear();
+                            continue;
+                        }
+                        else if(findWord(line, "DATA") != string::npos){
+                            //find the diretive data
+                            data = true;
+                            text = false;
+                            bss = false;
+
+                            lineNumber++;
+                            label.clear();
+                            operation.clear();
+                            continue;
+                        }
+                        else if(findWord(line, "BSS") != string::npos){
+                            //find the diretive bss
+                            bss = true;
+                            text = false;
+                            data = false;
+
+                            lineNumber++;
+                            label.clear();
+                            operation.clear();
+                            continue;
+                        }
+                        //if this is a section invalid
+                        else{
+                            throw invalid_argument("SECAO INVALIDA");
+                        }
+                    }
+
+                    //the diretive space
+                    else if(operation == diretivetable.SPACE){
+                        throw invalid_argument("DIRETIVA ERRADA");
+                    }
+
+                    //the diretive const
+                    else if(operation == diretivetable.CONST){
+                        throw invalid_argument("DIRETIVA ERRADA");
+                    }
+
+                    //the diretive public
+                    else if(operation == diretivetable.PUBLIC){
+
+                    }
+
+                    //the diretive extern
+                    else if(operation == diretivetable.EXTERN){
+
+                    }
+
+                    //the diretive begin
+                    else if(operation == diretivetable.BEGIN){
+                        MODULO = true;
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+
+                    //the diretive end
+                    else if(operation == diretivetable.END){
+                        if(!MODULO){
+                            throw invalid_argument("SECAO TEXTO FALTANTE");
+                        }
+
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+
+                    //if it doesn't find the diretive
+                    else{
+                        throw invalid_argument("OPERACAO INEXISTENTE");
+                    }
+                }
+
+                //the diretive doesn't exist
+                catch(invalid_argument& e){
+                    //the errors
+                    cerr << "ERRO NA LINHA " << lineNumber << endl;
+                    cerr << e.what() << endl;
+                    //close the file
+                    fclose(source);
+                    //leave the program
+                    exit(1);
+
+                }
+            }
+
+            //if the opcode exists
+            else{
+                //if the operations isn't in the section text
+                if(!text){
+                    throw invalid_argument("SECAO TEXTO FALTANTE");
+                }
+
+                //the operation of size 1
+                if(opcode == "14"){
+                    posNumber++;
+                    lineNumber++;
+                    label.clear();
+                    operation.clear();
+                    continue;
+                }
+
+                //the operation of size 3
+                else if(opcode == "09"){
+                    posNumber += 3;
+                    lineNumber++;
+                    label.clear();
+                    operation.clear();
+                    continue;
+                }
+
+                //the operation of size 2
+                else{
+                    posNumber += 2;
+                    lineNumber++;
+                    label.clear();
+                    operation.clear();
+                    continue;
+                }
+            }
+
         }
         else{
             //get the label
             for(counter = 0; counter < auxPos; counter++){
+                //the label doesn't have spaces
+                if((line[counter] == ' ') || (line[counter] == '\t')){
+                    continue;
+                }
                 label.push_back(line[counter]);
             }
 
@@ -800,14 +1013,195 @@ void Mounter::firstPassage(){
 
                 operation.push_back(line[counter]);
             }
-            cout << label;
-            cout << operation;
 
-            label = "";
-            operation = "";
+            //get the opcode of the operation
+            opcode = instructiontable.checkOperation(operation);
+
+            //if the instruction doesn't exist
+            if((opcode == "-1") && (operation != "")){
+                //check if it is a directive
+                try{
+                    //the diretive section
+                    if(operation == diretivetable.SECTION){
+                        //if it is the section text
+                        if(findWord(line, "TEXT") != string::npos){
+                            //find the diretive text
+                            text = true;
+                            data = false;
+                            bss = false;
+
+                            //put the informations into the symbol table
+                            symboltable.setSymbol(label, posNumber, false);
+
+                            lineNumber++;
+                            label.clear();
+                            operation.clear();
+                            continue;
+                        }
+                        else if(findWord(line, "DATA") != string::npos){
+                            //find the diretive data
+                            data = true;
+                            text = false;
+                            bss = false;
+
+                            //put the informations into the symbol table
+                            symboltable.setSymbol(label, posNumber, false);
+
+                            lineNumber++;
+                            label.clear();
+                            operation.clear();
+                            continue;
+                        }
+                        else if(findWord(line, "BSS") != string::npos){
+                            //find the diretive bss
+                            bss = true;
+                            text = false;
+                            data = false;
+
+                            //put the informations into the symbol table
+                            symboltable.setSymbol(label, posNumber, false);
+
+                            lineNumber++;
+                            label.clear();
+                            operation.clear();
+                            continue;
+                        }
+                        //if this is a section invalid
+                        else{
+                            throw invalid_argument("SECAO INVALIDA");
+                        }
+                    }
+
+                    //the diretive space
+                    else if(operation == diretivetable.SPACE){
+                        if(data || text || !bss){
+                            throw invalid_argument("DIRETIVA NA SECAO ERRADA");
+                        }
+                        //the total of allocated memory because of the space
+                        string memoryAllocated;
+
+                        //find the position of the diretive space
+                        auxPos = findWord(line, "SPACE");
+
+                        //get the position of the space
+                        for(counter = auxPos + 5; ; counter++){
+                            if(line[counter] == '\n'){
+                                auxPos = string::npos;
+                                break;
+                            }
+
+                            if((line[counter] != ' ') && (line[counter] != '\t')){
+                                auxPos = counter;
+                                break;
+                            }
+                        }
+
+                        //if the length of the space isn't specified, the size is 1
+                        if(auxPos == string::npos){
+                            symboltable.setSymbol(label, posNumber, false);
+
+                            lineNumber++;
+                            posNumber++;
+                            label.clear();
+                            operation.clear();
+                            continue;
+                        }
+
+                        else{
+                            for(counter = auxPos; ; counter++){
+                                if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\n')){
+                                    break;
+                                }
+
+                                memoryAllocated.push_back(line[counter]);
+                            }
+
+                            symboltable.setSymbol(label, posNumber, false);
+
+                            lineNumber++;
+                            posNumber += stoi(memoryAllocated);
+                            label.clear();
+                            operation.clear();
+                            continue;
+                        }
+                    }
+
+                    //the diretive const
+                    else if(operation == diretivetable.CONST){
+                        if(!data || text || bss){
+                            throw invalid_argument("DIRETIVA NA SECAO ERRADA");
+                        }
+
+                        symboltable.setSymbol(label, posNumber, false);
+
+                        lineNumber++;
+                        posNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+
+                    //the diretive public
+                    else if(operation == diretivetable.PUBLIC){
+
+                    }
+
+                    //the diretive extern
+                    else if(operation == diretivetable.EXTERN){
+
+                    }
+
+                    //the diretive begin
+                    else if(operation == diretivetable.BEGIN){
+                        MODULO = true;
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+
+                    //the diretive end
+                    else if(operation == diretivetable.END){
+                        if(!MODULO){
+                            throw invalid_argument("DIRETIVA ERRADA");
+                        }
+
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+
+                    //if it doesn't find the diretive
+                    else{
+                        throw invalid_argument("OPERACAO INEXISTENTE");
+                    }
+                }
+
+                //the diretive doesn't exist
+                catch(invalid_argument& e){
+                    //the errors
+                    cerr << "ERRO NA LINHA " << lineNumber << endl;
+                    cerr << e.what() << endl;
+                    //close the file
+                    fclose(source);
+                    //leave the program
+                    exit(1);
+
+                }
+            }
+
+            //if the operation exists
+            else{
+
+            }
         }
 
+        label.clear();
+        operation.clear();
     }while(line != "");
+
+    //cout << symboltable.getAddress("N2") << endl;
 }
 
 //this method will mount the source file

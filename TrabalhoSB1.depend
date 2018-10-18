@@ -1,8 +1,9 @@
 # depslib dependency file v1.0
-1539638453 source:/home/carlos/Documentos/UnB/Semestre_10/SB/Trabalho/SB1/montador.cpp
+1539794431 source:/home/carlos/Documentos/UnB/Semestre_10/SB/Trabalho/SB1/montador.cpp
 	<iostream>
 	<cstdio>
 	<string>
 	<vector>
 	<stdexcept>
+	<cstdlib>
 
