@@ -61,14 +61,22 @@ class SymbolTable{
     vector<int> address;
     //if the label is extern
     vector<bool> isExtern;
+    //the values of label
+    vector<int> values;
+    //the type of the label
+    vector<string> type;
 
 public:
     //set the attributes of this class
-    void setSymbol(const string&, const int&, const bool&) throw(invalid_argument);
+    void setSymbol(const string&, const int&, const bool&, const int&, const string&) throw(invalid_argument);
     //get the address
     int getAddress(const string&) throw(invalid_argument);
     //get the information if the symbol is extern
     bool getExtern(const string&) throw(invalid_argument);
+    //get the value of the symbol
+    int getValue(const string&) throw(invalid_argument);
+    //get the type of the symbol
+    string getType(const string&) throw(invalid_argument);
 };
 
 //this class will be the definition table of the first passage of the mounter
@@ -85,6 +93,8 @@ public:
     void setAddress(const string&, const int&);
     //get the address of the label
     int getAddress(const string&) throw(invalid_argument);
+    //get the list of labels in the definition table
+    vector<string> getLabel();
 };
 
 //this class will be the instruction table
@@ -142,6 +152,23 @@ class DiretiveTable{
     const static string END;
 };
 
+//this class will be the table of use
+class UseTable{
+    //the extern labels
+    vector<string> externLabel;
+    //the position of the extern labels
+    vector<int> externPos;
+
+public:
+    //set an extern label
+    void setExternLabel(const string&, const int&);
+    //get the names of labels
+    vector<string> getExternLabels();
+    //get the position of the labels
+    vector<int> getExternPos();
+
+};
+
 //this class will be the mounter
 class Mounter{
     //the file after the preprocessing
@@ -152,17 +179,23 @@ class Mounter{
     //an variable to check if the source file is a module or if it isn't
     bool MODULO = false;
 
+    //the name of the mounted file
+    string mountedName;
+
     //the tables
     SymbolTable symboltable;
     DefinitionTable definitiontable;
     InstructionTable instructiontable;
     DiretiveTable diretivetable;
+    UseTable usetable;
 
     //get an line of the source file
     string getFileLine();
 
-    //the first the passage of the mounted
+    //the first passage of the mounter
     void firstPassage();
+    //the second passage of the mounter
+    void secondPassage();
     //check if the word is present in the line
     size_t findWord(const string&, const string&);
 
@@ -178,7 +211,7 @@ public:
 
 //start of the main function
 int main(int argc, char** argv){
-    Preprocessor *pre = new Preprocessor("bin.asm");
+    Preprocessor *pre = new Preprocessor("fat_mod_B.asm");
     Mounter *mounter = new Mounter(pre->getPreprocessingName());
 
     pre->preprocess();
@@ -494,7 +527,7 @@ void Preprocessor::preprocess(){
 DEFINITION OF THE METHODS OF THE CLASS SymbolTable
 */
 //the method to set the symbols in the symbol table
-void SymbolTable::setSymbol(const string& str, const int& position, const bool& status) throw(invalid_argument){
+void SymbolTable::setSymbol(const string& str, const int& position, const bool& status, const int& number, const string& str2) throw(invalid_argument){
     //a regular counter
     unsigned int counter;
 
@@ -508,6 +541,8 @@ void SymbolTable::setSymbol(const string& str, const int& position, const bool& 
     label.push_back(str);
     address.push_back(position);
     isExtern.push_back(status);
+    values.push_back(number);
+    type.push_back(str2);
 }
 
 //the method to get the address of any label
@@ -534,6 +569,38 @@ bool SymbolTable::getExtern(const string& str) throw(invalid_argument){
     for(counter = 0; counter < label.size(); counter++){
         if(label[counter] == str){
             return isExtern[counter];
+        }
+    }
+
+    //if the label isn't in the vector
+    throw invalid_argument("ROTULO INEXISTENTE");
+}
+
+//the method to get the value of the label
+int SymbolTable::getValue(const string& str) throw(invalid_argument){
+    //a regular counter
+    unsigned int counter;
+
+    //a loop to search a label into the vector
+    for(counter = 0; counter < label.size(); counter++){
+        if(label[counter] == str){
+            return values[counter];
+        }
+    }
+
+    //if the label isn't in the vector
+    throw invalid_argument("ROTULO INEXISTENTE");
+}
+
+//the method to get the type of the label
+string SymbolTable::getType(const string& str) throw(invalid_argument){
+    //a regular counter
+    unsigned int counter;
+
+    //a loop to search a label into the vector
+    for(counter = 0; counter < label.size(); counter++){
+        if(label[counter] == str){
+            return type[counter];
         }
     }
 
@@ -588,6 +655,11 @@ int DefinitionTable::getAddress(const string& str) throw(invalid_argument){
     }
 
     throw invalid_argument("ROTULO NAO ENCONTRADO NA TABELA DE DEFINICAO");
+}
+
+//the method to get the list of labels in the definition table
+vector<string> DefinitionTable::getLabel(){
+    return label;
 }
 
 /*
@@ -690,12 +762,46 @@ const string DiretiveTable::BEGIN = "BEGIN";
 const string DiretiveTable::END = "END";
 
 /*
+DEFINITION OF THE METHODS OF THE CLASS UseTable
+*/
+//definition of the method to set an external label in the use table
+void UseTable::setExternLabel(const string& str, const int& pos){
+    externLabel.push_back(str);
+    externPos.push_back(pos);
+}
+
+//definition of the method to get the vector of the extern labels
+vector<string> UseTable::getExternLabels(){
+    return externLabel;
+}
+
+//definition of the method to gt the vector of the position of the extern labels
+vector<int> UseTable::getExternPos(){
+    return externPos;
+}
+
+/*
 DEFINITION OF THE METHODS OF THE CLASS Mounter
 */
 //this constructor will open the files
 Mounter::Mounter(const string& fileName){
+    //a regular counter
+    unsigned int counter;
+    //an auxiliar variable of the position
+    size_t auxPos;
+
     //open the file
     source = fopen(fileName.c_str(), "r");
+
+    //get the position of the .
+    auxPos = fileName.find('.');
+
+    //get the name of the mounted file
+    for(counter = 0; counter < auxPos; counter++){
+        mountedName.push_back(fileName[counter]);
+    }
+
+    mountedName = mountedName + ".obj";
 }
 
 //this destructor will close the files
@@ -719,7 +825,7 @@ size_t Mounter::findWord(const string& line, const string& word){
     }
     //check if there is space after the word
     else{
-        if((line[pos + word.size()] == ' ') || (line[pos + word.size()] == '\n')){
+        if((line[pos + word.size()] == ' ') || (line[pos + word.size()] == '\n') || (line[pos + word.size()] == '\r') || (line[pos + word.size()] == '\t')){
             return pos;
         }
         else{
@@ -824,7 +930,7 @@ void Mounter::firstPassage(){
 
             //get the operation
             for(counter = auxPos; ; counter++){
-                if((line[counter] == ' ')|| (line[counter] == '\t') || (line[counter] == '\n')){
+                if((line[counter] == ' ')|| (line[counter] == '\t') || (line[counter] == '\n') || (line[counter] == '\r')){
                     break;
                 }
 
@@ -893,16 +999,53 @@ void Mounter::firstPassage(){
 
                     //the diretive public
                     else if(operation == diretivetable.PUBLIC){
+                        //the public label
+                        string operand;
 
+                        //get the position of the diretive
+                        auxPos = findWord(line, "PUBLIC");
+
+                        //get the position of the operator
+                        for(counter = auxPos + 6; ; counter++){
+                            if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\n') && (line[counter] != '\r')){
+                                auxPos = counter;
+                                break;
+                            }
+
+                            if(line[counter] == '\n'){
+                                throw invalid_argument("DIRETIVA PUBLIC SEM OPERANDO");
+                            }
+                        }
+
+                        //get the operand
+                        for(counter = auxPos; ; counter++){
+                            if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\n') || (line[counter] == '\r')){
+                                break;
+                            }
+
+                            operand.push_back(line[counter]);
+                        }
+
+                        //put the operand in the definition table
+                        definitiontable.setLabel(operand);
+
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
                     }
 
                     //the diretive extern
                     else if(operation == diretivetable.EXTERN){
-
+                        throw invalid_argument("DIRETIVA EXTERN SEM ROTULO");
                     }
 
                     //the diretive begin
                     else if(operation == diretivetable.BEGIN){
+                        if(MODULO){
+                            throw invalid_argument("DIRETIVA BEGIN REPETIDA");
+                        }
+
                         MODULO = true;
                         lineNumber++;
                         label.clear();
@@ -1007,7 +1150,7 @@ void Mounter::firstPassage(){
 
             //get the operation
             for(counter = auxPos; ; counter++){
-                if((line[counter] == ' ') || (line[counter] == '\n') || (line[counter] == '\t')){
+                if((line[counter] == ' ') || (line[counter] == '\n') || (line[counter] == '\t') || (line[counter] == '\r')){
                     break;
                 }
 
@@ -1031,7 +1174,7 @@ void Mounter::firstPassage(){
                             bss = false;
 
                             //put the informations into the symbol table
-                            symboltable.setSymbol(label, posNumber, false);
+                            symboltable.setSymbol(label, posNumber, false, 0, "SECTION");
 
                             lineNumber++;
                             label.clear();
@@ -1045,7 +1188,7 @@ void Mounter::firstPassage(){
                             bss = false;
 
                             //put the informations into the symbol table
-                            symboltable.setSymbol(label, posNumber, false);
+                            symboltable.setSymbol(label, posNumber, false, 0, "SECTION");
 
                             lineNumber++;
                             label.clear();
@@ -1059,7 +1202,7 @@ void Mounter::firstPassage(){
                             data = false;
 
                             //put the informations into the symbol table
-                            symboltable.setSymbol(label, posNumber, false);
+                            symboltable.setSymbol(label, posNumber, false, 0, "SECTION");
 
                             lineNumber++;
                             label.clear();
@@ -1090,7 +1233,7 @@ void Mounter::firstPassage(){
                                 break;
                             }
 
-                            if((line[counter] != ' ') && (line[counter] != '\t')){
+                            if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\r')){
                                 auxPos = counter;
                                 break;
                             }
@@ -1098,7 +1241,7 @@ void Mounter::firstPassage(){
 
                         //if the length of the space isn't specified, the size is 1
                         if(auxPos == string::npos){
-                            symboltable.setSymbol(label, posNumber, false);
+                            symboltable.setSymbol(label, posNumber, false, 0, "SPACE");
 
                             lineNumber++;
                             posNumber++;
@@ -1109,14 +1252,14 @@ void Mounter::firstPassage(){
 
                         else{
                             for(counter = auxPos; ; counter++){
-                                if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\n')){
+                                if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\n') || (line[counter] == '\r')){
                                     break;
                                 }
 
                                 memoryAllocated.push_back(line[counter]);
                             }
 
-                            symboltable.setSymbol(label, posNumber, false);
+                            symboltable.setSymbol(label, posNumber, false, 0, "SPACE");
 
                             lineNumber++;
                             posNumber += stoi(memoryAllocated);
@@ -1132,7 +1275,34 @@ void Mounter::firstPassage(){
                             throw invalid_argument("DIRETIVA NA SECAO ERRADA");
                         }
 
-                        symboltable.setSymbol(label, posNumber, false);
+                        //the value of the constant
+                        string value;
+
+                        //get the position of the diretive const
+                        auxPos = findWord(line, "CONST");
+
+                        //get the position of the const value
+                        for(counter = auxPos + 5; ; counter++){
+                            if((line[counter] != ' ') && (line[counter] != '\t')){
+                                auxPos = counter;
+                                break;
+                            }
+
+                            if(line[counter] == '\n'){
+                                throw invalid_argument("DIRETIVA CONST SEM VALOR");
+                            }
+                        }
+
+                        //get the value of the const
+                        for(counter = auxPos; ; counter++){
+                            if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\n')){
+                                break;
+                            }
+
+                            value.push_back(line[counter]);
+                        }
+
+                        symboltable.setSymbol(label, posNumber, false, stoi(value), "CONST");
 
                         lineNumber++;
                         posNumber++;
@@ -1140,19 +1310,61 @@ void Mounter::firstPassage(){
                         operation.clear();
                         continue;
                     }
-
                     //the diretive public
                     else if(operation == diretivetable.PUBLIC){
+                        //the public label
+                        string operand;
 
+                        //get the position of the diretive
+                        auxPos = findWord(line, "PUBLIC");
+
+                        //get the position of the operator
+                        for(counter = auxPos + 6; ; counter++){
+                            if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\n') && (line[counter] != '\r')){
+                                auxPos = counter;
+                                break;
+                            }
+
+                            if(line[counter] == '\n'){
+                                throw invalid_argument("DIRETIVA PUBLIC SEM OPERANDO");
+                            }
+                        }
+
+                        //get the operand
+                        for(counter = auxPos; ; counter++){
+                            if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\n') || (line[counter] == '\r')){
+                                break;
+                            }
+
+                            operand.push_back(line[counter]);
+                        }
+
+                        //put the operand in the definition table
+                        definitiontable.setLabel(operand);
+
+                        symboltable.setSymbol(label, auxPos, false, 0, "PUBLIC");
+
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
                     }
 
                     //the diretive extern
                     else if(operation == diretivetable.EXTERN){
+                        symboltable.setSymbol(label, 0, true, 0, "EXTERN");
 
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
                     }
 
                     //the diretive begin
                     else if(operation == diretivetable.BEGIN){
+                        //put in the symbol table
+                        symboltable.setSymbol(label, posNumber, false, 0, "BEGIN");
+
                         MODULO = true;
                         lineNumber++;
                         label.clear();
@@ -1165,6 +1377,9 @@ void Mounter::firstPassage(){
                         if(!MODULO){
                             throw invalid_argument("DIRETIVA ERRADA");
                         }
+
+                        //put in the symbol table
+                        symboltable.setSymbol(label, posNumber, false, 0, "END");
 
                         lineNumber++;
                         label.clear();
@@ -1193,6 +1408,48 @@ void Mounter::firstPassage(){
 
             //if the operation exists
             else{
+                try{
+                    //if it is not in the section text
+                    if(!text){
+                        throw invalid_argument("OPERACAO NA SECAO ERRADA");
+                    }
+
+                    //put the label in the symbol table
+                    symboltable.setSymbol(label, posNumber, false, 0, "");
+
+                    //the operation of size 1
+                    if(opcode == "14"){
+                        posNumber++;
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+
+                    //the operation of size 3
+                    else if(opcode == "09"){
+                        posNumber += 3;
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+
+                    //the operation of size 2
+                    else{
+                        posNumber += 2;
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+                }
+                catch(invalid_argument& e){
+                    cerr << e.what() << endl;
+                    cerr << "ERRO NA LINHA " << lineNumber << endl;
+                    fclose(source);
+                    exit(1);
+                }
 
             }
         }
@@ -1201,10 +1458,165 @@ void Mounter::firstPassage(){
         operation.clear();
     }while(line != "");
 
-    //cout << symboltable.getAddress("N2") << endl;
+    //put the addressses of the definition table
+    try{
+        //all public labels
+        vector<string> definitions;
+
+        //get the public labels
+        definitions = definitiontable.getLabel();
+
+        //get the addresses of the label
+        for(counter = 0; counter < definitions.size(); counter++){
+            definitiontable.setAddress(definitions[counter], symboltable.getAddress(definitions[counter]));
+        }
+
+    }
+    //if doesn't encounter the label in the symbol table
+    catch(invalid_argument& e){
+        cerr << e.what() << endl;
+        //close the file
+        fclose(source);
+        //leave the program
+        exit(1);
+    }
+
+    //cout << symboltable.getAddress("OLD_DATA") << endl;
+}
+
+//definition of the method of the second passage
+void Mounter::secondPassage(){
+    //the line counter
+    unsigned int lineNumber = 1;
+    //the position counter
+    unsigned int posNumber = 0;
+    //the line of the file
+    string line;
+    //the operation
+    string operation;
+    //the operand
+    string operand;
+    //the opcode of the operation
+    string opcode;
+    //the output code
+    string code;
+    //an auxiliar position variable
+    size_t auxPos;
+    //a regular counter
+    unsigned int counter;
+
+    //put the cursor in the beginning of the file
+    fseek(source, 0, SEEK_SET);
+
+    do{
+        //get the line from the file
+        line = getFileLine();
+
+        //get the position of the :
+        auxPos = line.find(':');
+
+        //if doesn't have the :
+        if(auxPos == string::npos){
+            counter = 0;
+        }
+        else{
+            counter = auxPos + 1;
+        }
+
+        //get the position of the operation
+        while(true){
+            if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\r')){
+                auxPos = counter;
+                break;
+            }
+
+            counter++;
+        }
+
+        //get the operation
+        for(counter = auxPos; ; counter++){
+            if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r')){
+                break;
+            }
+
+            //put the character in the string
+            operation.push_back(line[counter]);
+        }
+
+        //get the opcode of the operation
+        opcode = instructiontable.checkOperation(operation);
+
+        //if the instruction doesnt exists
+        if((opcode == "-1") && (operation != "")){
+            //the diretives
+            if(operation == diretivetable.BEGIN){
+                lineNumber++;
+                operation.clear();
+                continue;
+            }
+
+            else if(operation == diretivetable.CONST){
+                auxPos = line.find("CONST");
+
+                //get the position of the operand
+                for(counter = auxPos + 5; ; counter++){
+                    if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\r')){
+                        auxPos = counter;
+                        break;
+                    }
+                }
+
+                //get the operand
+                for(counter = auxPos + 5; ; counter++){
+                    if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r')){
+                        break;
+                    }
+
+                    operand.push_back(line[counter]);
+                }
+
+                //add in the code
+                code += operand;
+                code += " ";
+
+                //add the position
+                posNumber++;
+                lineNumber++;
+
+                operation.clear();
+                operand.clear();
+
+                continue;
+            }
+
+            else if(operation == diretivetable.END){
+
+            }
+
+            else if(operation == diretivetable.EXTERN){
+
+            }
+
+            else if(operation == diretivetable.PUBLIC){
+
+            }
+
+            else if(operation == diretivetable.SECTION){
+
+            }
+
+            else if(operation == diretivetable.SPACE){
+
+            }
+        }
+
+        cout << operation << endl;
+
+    }while(line != "");
 }
 
 //this method will mount the source file
 void Mounter::mount(){
     firstPassage();
+    secondPassage();
 }
