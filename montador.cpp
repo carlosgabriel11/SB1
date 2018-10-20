@@ -808,7 +808,7 @@ Mounter::Mounter(const string& fileName){
 Mounter::~Mounter(){
     //closing the files
     fclose(source);
-    //fclose(mounted);
+    fclose(mounted);
 }
 
 //the method to check if there is any word in the string
@@ -855,6 +855,10 @@ string Mounter::getFileLine(){
 
         //if the character is a \n, return
         if(chAux == '\n'){
+            if(line == "\n"){
+                return "";
+            }
+
             return line;
         }
     }
@@ -906,7 +910,7 @@ void Mounter::firstPassage(){
             try{
                 //get the position of the operation
                 for(counter = 0; ; counter++){
-                    if((line[counter] != ' ') && (line[counter] != '\t')){
+                    if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\r')){
                         auxPos = counter;
                         break;
                     }
@@ -1086,36 +1090,47 @@ void Mounter::firstPassage(){
 
             //if the opcode exists
             else{
-                //if the operations isn't in the section text
-                if(!text){
-                    throw invalid_argument("SECAO TEXTO FALTANTE");
-                }
+                try{
 
-                //the operation of size 1
-                if(opcode == "14"){
-                    posNumber++;
-                    lineNumber++;
-                    label.clear();
-                    operation.clear();
-                    continue;
-                }
+                    //if the operations isn't in the section text
+                    if(!text){
+                        throw invalid_argument("SECAO TEXTO FALTANTE");
+                    }
 
-                //the operation of size 3
-                else if(opcode == "09"){
-                    posNumber += 3;
-                    lineNumber++;
-                    label.clear();
-                    operation.clear();
-                    continue;
-                }
+                    //the operation of size 1
+                    if(opcode == "14"){
+                        posNumber++;
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
 
-                //the operation of size 2
-                else{
-                    posNumber += 2;
-                    lineNumber++;
-                    label.clear();
-                    operation.clear();
-                    continue;
+                    //the operation of size 3
+                    else if(opcode == "09"){
+                        posNumber += 3;
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+
+                    //the operation of size 2
+                    else{
+                        posNumber += 2;
+                        lineNumber++;
+                        label.clear();
+                        operation.clear();
+                        continue;
+                    }
+                }
+                catch(invalid_argument& e){
+                    cerr << e.what() << endl;
+                    cerr << "ERRO NA LINHA " << lineNumber << endl;
+                    //close the file
+                    fclose(source);
+                    //leave the program
+                    exit(1);
                 }
             }
 
@@ -1499,7 +1514,9 @@ void Mounter::secondPassage(){
     //the opcode of the operation
     string opcode;
     //the output code
-    string code;
+    string code = "";
+    //the relative position
+    vector<int> relative;
     //an auxiliar position variable
     size_t auxPos;
     //a regular counter
@@ -1509,8 +1526,13 @@ void Mounter::secondPassage(){
     fseek(source, 0, SEEK_SET);
 
     do{
+        cout << code << endl;
         //get the line from the file
         line = getFileLine();
+
+        if(line == ""){
+            break;
+        }
 
         //get the position of the :
         auxPos = line.find(':');
@@ -1535,7 +1557,7 @@ void Mounter::secondPassage(){
 
         //get the operation
         for(counter = auxPos; ; counter++){
-            if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r')){
+            if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r') || (line[counter] == '\n')){
                 break;
             }
 
@@ -1567,12 +1589,16 @@ void Mounter::secondPassage(){
                 }
 
                 //get the operand
-                for(counter = auxPos + 5; ; counter++){
-                    if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r')){
+                for(counter = auxPos; ; counter++){
+                    if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r') || (line[counter] == '\n')){
                         break;
                     }
 
                     operand.push_back(line[counter]);
+                }
+
+                if(stoi(operand) < 10){
+                    code += "0";
                 }
 
                 //add in the code
@@ -1590,29 +1616,330 @@ void Mounter::secondPassage(){
             }
 
             else if(operation == diretivetable.END){
-
+                lineNumber++;
+                operation.clear();
+                continue;
             }
 
             else if(operation == diretivetable.EXTERN){
-
+                lineNumber++;
+                operation.clear();
+                continue;
             }
 
             else if(operation == diretivetable.PUBLIC){
-
+                lineNumber++;
+                operation.clear();
+                continue;
             }
 
             else if(operation == diretivetable.SECTION){
-
+                lineNumber++;
+                operation.clear();
+                continue;
             }
 
             else if(operation == diretivetable.SPACE){
+                auxPos = line.find("SPACE");
 
+                //a variable to check if there is a operand
+                bool state = false;
+
+                //get the position of the operand
+                for(counter = auxPos + 5; ; counter++){
+                    if(line[counter] == '\n'){
+                        state = true;
+                    }
+
+                    if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\r')){
+                        auxPos = counter;
+                        break;
+                    }
+                }
+
+                if(state){
+                    code += "00 ";
+                    lineNumber++;
+                    posNumber++;
+
+                    operation.clear();
+
+                    continue;
+                }
+
+                //get the operand
+                for(counter = auxPos; ; counter++){
+                    if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r')){
+                        break;
+                    }
+
+                    operand.push_back(line[counter]);
+                }
+
+                //add in the code
+                for(counter = 0; counter < (unsigned int)stoi(operand); counter++){
+                    code += "00 ";
+                    posNumber++;
+                }
+
+                //add the line
+                lineNumber++;
+
+                operation.clear();
+                operand.clear();
+
+                continue;
             }
         }
 
-        cout << operation << endl;
+        else{
+            try{
 
+                //all the operations except copy and stop
+                if((opcode != "09") && (opcode != "14")){
+                    //get the position of the operand
+                    auxPos = line.find(operation);
+
+                    for(counter = auxPos + operation.size(); ; counter++){
+                        if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\r')){
+                            auxPos = counter;
+                            break;
+                        }
+                    }
+
+                    //get the operand
+                    for(counter = auxPos; ; counter++){
+                        if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r') || (line[counter] == '\n')){
+                            break;
+                        }
+
+                        operand.push_back(line[counter]);
+                    }
+
+                    //for division by zero
+                    if(opcode == "04"){
+                        //if it is a const label
+                        if(symboltable.getType(operand) == "CONST"){
+                            if(symboltable.getValue(operand) == 0){
+                                throw invalid_argument("DIVISAO POR 0");
+                            }
+                        }
+                    }
+
+                    //for the jumps, search if it a valid label
+                    if((opcode == "05") || (opcode == "06") || (opcode == "07") || (opcode == "08")){
+                        if((symboltable.getType(operand) == "CONST") || (symboltable.getType(operand) == "SPACE")){
+                            throw invalid_argument("PULO PARA SECAO ERRADA");
+                        }
+                    }
+
+                    //for the store and the input, check if it is modifying a constant value
+                    if((opcode == "11") || (opcode == "12")){
+                        if(symboltable.getType(operand) == "CONST"){
+                            throw invalid_argument("MODIFICACAO DE VALOR CONSTANTE");
+                        }
+                    }
+
+                    //check if the operand is valid
+                    if((symboltable.getType(operand) != "CONST") && (symboltable.getType(operand) != "SPACE") && (symboltable.getType(operand) != "EXTERN")){
+                        throw invalid_argument("ROTULO INVALIDO");
+                    }
+
+                    //put the informations in the table of use
+                    if(symboltable.getExtern(operand)){
+                        usetable.setExternLabel(operand, posNumber + 1);
+                    }
+                    else{
+                        relative.push_back(posNumber+1);
+                    }
+
+                    //put the informations into the code
+                    code += opcode;
+                    code += " ";
+
+                    if(symboltable.getAddress(operand) < 10){
+                        code += "0";
+                    }
+
+                    code += to_string(symboltable.getAddress(operand));
+                    code += " ";
+
+                    posNumber += 2;
+                    lineNumber++;
+
+                    operation.clear();
+                    operand.clear();
+                    continue;
+                }
+
+                //the copy operation
+                else if(opcode == "09"){
+                    //the copy have two operands
+                    string secondOperand;
+
+                    //get the position of the operand
+                    auxPos = line.find(operation);
+
+                    for(counter = auxPos + operation.size(); ; counter++){
+                        if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\r')){
+                            auxPos = counter;
+                            break;
+                        }
+                    }
+
+                    //get the operand
+                    for(counter = auxPos; ; counter++){
+                        if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r') || (line[counter] == ',')){
+                            break;
+                        }
+
+                        operand.push_back(line[counter]);
+                    }
+
+                    //get the position of the second operand
+                    for(counter = auxPos + operand.size() + 1; ; counter++){
+                        if((line[counter] != ' ') && (line[counter] != '\t') && (line[counter] != '\r') && (line[counter] != ',')){
+                            auxPos = counter;
+                            break;
+                        }
+                    }
+
+                    //get the second operand
+                    for(counter = auxPos; ; counter++){
+                        if((line[counter] == ' ') || (line[counter] == '\t') || (line[counter] == '\r') || (line[counter] == '\n')){
+                            break;
+                        }
+
+                        secondOperand.push_back(line[counter]);
+                    }
+
+                    //check if the second operand is the type const
+                    if(symboltable.getType(secondOperand) == "CONST"){
+                        throw invalid_argument("MODIFICACAO DE VALOR CONSTANTE");
+                    }
+
+                    //check if the first operand is valid
+                    if((symboltable.getType(operand) != "CONST") && (symboltable.getType(operand) != "SPACE") && (symboltable.getType(operand) != "EXTERN")){
+                        throw invalid_argument("ROTULO INVALIDO");
+                    }
+
+                    //check if the second operand is valid
+                    if((symboltable.getType(secondOperand) != "SPACE") && (symboltable.getType(secondOperand) != "EXTERN")){
+                        throw invalid_argument("ROTULO INVALIDO");
+                    }
+
+                    //put the informations in the table of use
+                    if(symboltable.getExtern(operand)){
+                        usetable.setExternLabel(operand, posNumber + 1);
+                    }
+                    else{
+                        relative.push_back(posNumber + 1);
+                    }
+
+                    if(symboltable.getExtern(secondOperand)){
+                        usetable.setExternLabel(operand, posNumber + 2);
+                    }
+                    else{
+                        relative.push_back(posNumber + 1);
+                    }
+
+                    //put the informations in the code
+                    code += opcode;
+                    code += " ";
+
+                    if(symboltable.getAddress(operand) < 10){
+                        code += "0";
+                    }
+
+                    code += to_string(symboltable.getAddress(operand));
+                    code += " ";
+
+                    if(symboltable.getAddress(secondOperand) < 10){
+                        code += "0";
+                    }
+
+                    code += to_string(symboltable.getAddress(secondOperand));
+                    code += " ";
+
+                    //add the address and the line number
+                    posNumber += 3;
+                    lineNumber++;
+
+                    operation.clear();
+                    operand.clear();
+                    continue;
+                }
+
+                //the stop operation
+                else if(opcode == "14"){
+
+                //put the opcode in the code
+                code += opcode;
+                code += " ";
+
+                //add the address and the line number
+                posNumber++;
+                lineNumber++;
+
+                operation.clear();
+                operand.clear();
+                continue;
+                }
+            }
+
+            //if there is an error
+            catch(invalid_argument& e){
+                cerr << e.what() << endl;
+                cerr << "ERRO NA LINHA " << lineNumber << endl;
+                //close the file
+                fclose(source);
+                //leave the program
+                exit(1);
+            }
+        }
     }while(line != "");
+
+    //put the informations on the file
+    mounted = fopen(mountedName.c_str(), "w");
+
+    //if it is a module
+    if(MODULO){
+        //the informations in the use table
+        vector<string> use = usetable.getExternLabels();
+        vector<int> usePos = usetable.getExternPos();
+        //the informations in the definition table
+        vector<string> definition = definitiontable.getLabel();
+
+        //put the informations in the file
+        //put the informations of the use table in the file
+        fputs("TABLE USE\n", mounted);
+        for(counter = 0; counter < use.size(); counter++){
+            fprintf(mounted, "%s ", use[counter].c_str());
+            fprintf(mounted, "%d\n", usePos[counter]);
+        }
+
+        //put the informations of the definition table
+        fprintf(mounted, "\nTABLE DEFINITION\n");
+        for(counter = 0; counter < definition.size(); counter++){
+            fprintf(mounted, "%s ", definition[counter].c_str());
+            fprintf(mounted, "%d\n", definitiontable.getAddress(definition[counter]));
+        }
+
+        //put the informations of the relatives
+        fprintf(mounted, "\nRELATIVE\n");
+        for(counter = 0; counter < relative.size(); counter++){
+            fprintf(mounted, "%d ", relative[counter]);
+        }
+
+        fprintf(mounted, "\n\n");
+
+        //put the code
+        fputs(code.c_str(), mounted);
+    }
+    else{
+        fputs(code.c_str(), mounted);
+    }
+
 }
 
 //this method will mount the source file
