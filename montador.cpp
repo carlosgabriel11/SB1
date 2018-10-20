@@ -198,6 +198,8 @@ class Mounter{
     void secondPassage();
     //check if the word is present in the line
     size_t findWord(const string&, const string&);
+    //analyse the labels
+    void labelAnalysis(const string&) throw(invalid_argument);
 
 public:
     //the constructor of the class
@@ -211,7 +213,14 @@ public:
 
 //start of the main function
 int main(int argc, char** argv){
-    Preprocessor *pre = new Preprocessor("fat_mod_B.asm");
+    if(argc == 1){
+        //no source file
+        cout << "SEM ARQUIVO" << endl;
+        //leave the program
+        exit(1);
+    }
+
+    Preprocessor *pre = new Preprocessor(argv[1]);
     Mounter *mounter = new Mounter(pre->getPreprocessingName());
 
     pre->preprocess();
@@ -866,6 +875,13 @@ string Mounter::getFileLine(){
     return "";
 }
 
+//the method to analyse the label
+void Mounter::labelAnalysis(const string& str) throw(invalid_argument){
+    if((str[0] >= '0') && (str[0] <= '9')){
+        throw invalid_argument("TOKEN INVALIDO");
+    }
+}
+
 //this method will do the first passage of the mounter
 void Mounter::firstPassage(){
     //the line of the file
@@ -1147,6 +1163,9 @@ void Mounter::firstPassage(){
 
             //get the position of the operation
             try{
+                //analyse the label
+                labelAnalysis(label);
+
                 for(counter = (auxPos + 1); ; counter++){
                     if((line[counter] != ' ') && (line[counter] != '\n') && (line[counter] != '\t')){
                         auxPos = counter;
@@ -1161,6 +1180,10 @@ void Mounter::firstPassage(){
             catch(invalid_argument& e){
                 cerr << "Erro na linha " << lineNumber << endl;
                 cerr << e.what() << endl;
+                //close the file
+                fclose(source);
+                //leave the program
+                exit(1);
             }
 
             //get the operation
@@ -1526,7 +1549,6 @@ void Mounter::secondPassage(){
     fseek(source, 0, SEEK_SET);
 
     do{
-        cout << code << endl;
         //get the line from the file
         line = getFileLine();
 
@@ -1734,15 +1756,22 @@ void Mounter::secondPassage(){
                     }
 
                     //for the store and the input, check if it is modifying a constant value
-                    if((opcode == "11") || (opcode == "12")){
+                    else if((opcode == "11") || (opcode == "12")){
                         if(symboltable.getType(operand) == "CONST"){
                             throw invalid_argument("MODIFICACAO DE VALOR CONSTANTE");
                         }
+
+                        //check if the operand is valid
+                        if((symboltable.getType(operand) != "SPACE") && (symboltable.getType(operand) != "EXTERN")){
+                            throw invalid_argument("ROTULO INVALIDO");
+                        }
                     }
 
-                    //check if the operand is valid
-                    if((symboltable.getType(operand) != "CONST") && (symboltable.getType(operand) != "SPACE") && (symboltable.getType(operand) != "EXTERN")){
-                        throw invalid_argument("ROTULO INVALIDO");
+                    else{
+                        //check if the operand is valid
+                        if((symboltable.getType(operand) != "CONST") && (symboltable.getType(operand) != "SPACE") && (symboltable.getType(operand) != "EXTERN")){
+                            throw invalid_argument("ROTULO INVALIDO");
+                        }
                     }
 
                     //put the informations in the table of use
@@ -1939,11 +1968,12 @@ void Mounter::secondPassage(){
     else{
         fputs(code.c_str(), mounted);
     }
-
 }
 
 //this method will mount the source file
 void Mounter::mount(){
     firstPassage();
     secondPassage();
+
+    cout << "MONTAGEM BEM SUCEDIDA" << endl;
 }
