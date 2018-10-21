@@ -1960,12 +1960,13 @@ void Mounter::secondPassage(){
             fprintf(mounted, "%d ", relative[counter]);
         }
 
-        fprintf(mounted, "\n\n");
+        fprintf(mounted, "\n\nCODE\n");
 
         //put the code
         fputs(code.c_str(), mounted);
     }
     else{
+        fprintf(mounted,"CODE\n");
         fputs(code.c_str(), mounted);
     }
 }
