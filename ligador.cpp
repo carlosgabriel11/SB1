@@ -1,3 +1,4 @@
+// Updated 10/20/2018 9:30 PM
 #include <iostream>
 #include <map>
 #include <bits/stdc++.h>
@@ -14,7 +15,7 @@ void printIt(std::map<string,int> m) {      // Funcao para print de std::map par
     std::cout << "\n";
 }
 
-void PrintIt(auto m){
+void PrintIt(auto m){                       // Funcao para print de std::map TU para debug visual
   cout << "TU: " << endl;
   for(std::map<int, string>::iterator it=m.begin();it!=m.end();++it)
       std::cout << it->first<<":"<<it->second<<" ";
@@ -40,23 +41,22 @@ void get_data(auto relatives, auto FileName, auto TD, auto TU, auto Fator_correc
       TU[i].insert(make_pair(num,str));
     }
   }
-
   fscanf(ptr,"%s", aux);
-  while(strcmp(aux,"RELATIVES")!=0){  // Aquisicao dos dados da tabela de definicoes
+  while(strcmp(aux,"RELATIVE")!=0){  // Aquisicao dos dados da tabela de definicoes
     fscanf(ptr,"%s", aux);
-    if(strcmp(aux,"RELATIVES")!=0){
+    if(strcmp(aux,"RELATIVE")!=0){
       fscanf(ptr, "%d", &num);
       str = aux;
       TD[i].insert(make_pair(str,num));
     }
   }
-
   while(strcmp(aux,"CODE")!=0){       // Aquisicao dos dados de enderecos relativos
     fscanf(ptr, "%s", aux);
     if(strcmp(aux,"CODE")!=0){
       relatives[i].push_back(stoi(aux));
     }
   }
+
   Fator_correcao[i] = 0;
   while(fscanf(ptr,"%d", &num)!=EOF){
     Fator_correcao[i]++;
@@ -84,16 +84,16 @@ void gera_binario(auto TDglobal, auto TU, auto Fator_correcao, auto FileNames, a
       }
       int counter = 0, tempREL=0, cod; // contador de tokens e variaveis temporarias de relatives
       while(fscanf(inptr, "%d", &cod)!=EOF){
-        cout << "Arquivo:" << i << " cod:" << cod << endl;
+
         it = TU[i].find(counter);
         if(it!=TU[i].end()){
           cod = TDglobal[it->second]; // Se a posicao atual esta na tabela de uso, subsituir pelo valor da TDglobal(tabela de definicoes global)
-          cout << "Achou na TU substitui por:" << TDglobal[it->second] << endl;
+
         }
         else if(tempREL<relatives[i].size()){
           if(counter==relatives[i][tempREL]){ // Se posicao atual esta na lista de enderecos relativos, soma offset do fator de correcao
-            cout << "Achou na lista de relatives:" << relatives[i][tempREL] << endl;
-            cod+=Fator_correcao[i-1];
+
+            if(i!=0)cod+=Fator_correcao[i-1];
             tempREL++;
           }
         }
@@ -110,26 +110,24 @@ int main(int argc,char **argv){
     int N_arquivos, t;
     string str;
     N_arquivos = argc-1;
-    cout << "N_arquivos" << N_arquivos << endl;
 
     // Pega o nome dos arquivos
     string FileNames[N_arquivos];
     for(int i=0;i<N_arquivos;i++){
       FileNames[i] = argv[i+1];
       str = FileNames[i];
-      cout << "chegou aqui" << endl;
+
       t = str.size();
-      if((str[t-1]!='j')||(str[t-2]!='b')||(str[t-3]!='o')||(str[t-4]!='.')){
+      if((str[t-1]!='j')||(str[t-2]!='b')||(str[t-3]!='o')||(str[t-4]!='.')){ // Arruma o nome dos arquivos de entrada com extensao .obj
         str += ".obj";
       }
       FileNames[i] = str;
     }
     outname = FileNames[0];
-    t = outname.size();
+    t = outname.size();     // Arruma o nome do arquivo de saida com extensao .e
     outname[t-3] = 'e';
     outname[t-2] = '\0';
     outname[t-1] = '\0';
-    cout << "outname: " << outname << endl;
 
     if(argc==2){  // Caso haja somente um modulo
       FILE *outptr, *inptr;
@@ -143,21 +141,13 @@ int main(int argc,char **argv){
       fclose(outptr);
     }
     else{ // Caso haja mais de um modulo para ligar
-      //Obtencao das tabelas de Uso e de definicoes, assim como tamanho dos arquivos objeto e listas de enderecos relativos
+      //Obtencao das tabelas de Uso e de definicoes, assim como tamanho dos arquivos objeto e lista de enderecos relativos
       int Fator_correcao[N_arquivos];
       vector<int> relatives[N_arquivos];
       map<string,int> TD[N_arquivos], TDglobal;
       map<int,string> TU[N_arquivos];
       for(int i=0;i<N_arquivos;i++){
         get_data(relatives, FileNames[i], TD, TU, Fator_correcao, i);
-        PrintIt(TU[i]);
-        printIt(TD[i]);
-        cout << "Relatives: ";
-        for(int a=0;a<relatives[i].size();a++){
-          cout << relatives[i][a] << " ";
-        }
-        cout << endl;
-        cout << "Fator de correcao: " << Fator_correcao[i] << endl;
       }
       //Gerando tabela de definicoes global
       for(int i=0;i<N_arquivos;i++){
@@ -166,7 +156,6 @@ int main(int argc,char **argv){
               else     TDglobal[it->first] = it->second;
           }
       }
-      printIt(TDglobal);
 
       // Inicio da escrita no arquivo de saida
       gera_binario(TDglobal, TU, Fator_correcao, FileNames, N_arquivos, relatives);
